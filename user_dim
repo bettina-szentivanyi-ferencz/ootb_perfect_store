@@ -9,10 +9,10 @@ SELECT
   login_name, -- mandatory
   project_name, -- mandatory
   supervisor_login_name, -- mandatory for rls
-FROM ` trax-cpg-dwh-int.ootb_perfect_store.user_dim`
+FROM `trax-cpg-dwh-int.prod.user_dim`
 WHERE project_name IN ('pureaidemoemea') --mandatory
   AND is_deleted = FALSE -- mandatory
   AND trax_user = FALSE
-  {users_with_sessions} -- quastion to Sharon
+ -- {users_with_sessions} -- quastion to Sharon
 
   );
