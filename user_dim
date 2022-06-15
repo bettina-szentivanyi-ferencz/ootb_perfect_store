@@ -1,0 +1,18 @@
+drop table ootb_perfect_store.user_dim;
+
+create or replace table ootb_perfect_store.user_dim
+as(
+
+SELECT
+  ROW_NUMBER() OVER (ORDER BY user_pk asc) AS user_pk, 
+  user_pk AS user_pk_service, --mandatory hidden
+  login_name, -- mandatory
+  project_name, -- mandatory
+  supervisor_login_name, -- mandatory for rls
+FROM ` trax-cpg-dwh-int.ootb_perfect_store.user_dim`
+WHERE project_name IN ('pureaidemoemea') --mandatory
+  AND is_deleted = FALSE -- mandatory
+  AND trax_user = FALSE
+  {users_with_sessions} -- quastion to Sharon
+
+  );
