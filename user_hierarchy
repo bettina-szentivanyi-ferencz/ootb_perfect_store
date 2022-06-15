@@ -1,0 +1,66 @@
+drop table ootb_perfect_store.user_hierarchy;
+
+create table ootb_perfect_store.user_hierarchy
+
+as
+(
+
+select distinct 
+hierarchy.child_fk,
+hierarchy.child,
+hierarchy.parent,
+user_dim.login_name
+from (
+	with
+	cte_supervisors --cte table to list users with their supervisors
+	as
+	(
+	SELECT distinct
+		user_dim.user_pk_service,
+        user_dim.user_pk,
+		report_operational_hierarchy.supervisor_fk 
+		FROM ootb_perfect_store.user_dim
+		left join `trax-cpg-dwh-int.prod.report_operational_hierarchy` report_operational_hierarchy
+		on user_dim.user_pk_service = report_operational_hierarchy.sales_rep_fk
+		where report_operational_hierarchy.project_name in ('pureaidemoemea') and report_operational_hierarchy.supervisor_fk is not null
+
+	)
+
+	SELECT distinct  --union part 1 to list the indirect supervisor
+		user_dim.user_pk_service as child,
+		user_dim.user_pk as child_fk,
+		report_operational_hierarchy.supervisor_fk,
+		case when cte_supervisors.supervisor_fk is null and report_operational_hierarchy.supervisor_fk is null then user_dim.user_pk_service
+			when report_operational_hierarchy.supervisor_fk is not null and cte_supervisors.supervisor_fk is null then report_operational_hierarchy.supervisor_fk
+			when cte_supervisors.supervisor_fk is not null then cte_supervisors.supervisor_fk end as parent
+		FROM ootb_perfect_store.user_dim
+		left join `trax-cpg-dwh-int.prod.report_operational_hierarchy` report_operational_hierarchy
+		on user_dim.user_pk_service = report_operational_hierarchy.sales_rep_fk
+		left join cte_supervisors 
+		on cte_supervisors.user_pk_service = report_operational_hierarchy.supervisor_fk
+		where report_operational_hierarchy.project_name in ('pureaidemoemea') and report_operational_hierarchy.supervisor_fk is not null
+
+	union all 
+
+	select distinct --union part 2 to list all users
+		user_dim.user_pk_service as child,
+		user_dim.user_pk as child_fk,
+		'' as supervisor_fk,
+		user_dim.user_pk_service as parent
+		FROM ootb_perfect_store.user_dim
+
+	union all 
+
+	SELECT distinct --union part 3 to list the direct supervisor
+		cte_supervisors.user_pk_service as child,
+		cte_supervisors.user_pk as child_fk,
+		'' as supervisor_fk,
+		cte_supervisors.supervisor_fk as parent
+		FROM cte_supervisors
+
+) hierarchy
+join ootb_perfect_store.user_dim
+on user_dim.user_pk_service = hierarchy.parent
+order by child_fk
+
+);
