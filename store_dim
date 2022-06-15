@@ -1,0 +1,21 @@
+drop table ootb_perfect_store.store_dim;
+create or replace table ootb_perfect_store.store_dim
+as(
+
+select
+project_name,
+    ROW_NUMBER() OVER (ORDER BY store_pk asc) AS store_pk, --mandatory hidden
+    store_pk AS store_pk_service, --mandatory hidden
+    store_name,-- optional
+    region_name,-- optional
+    retailer_name -- optional
+from `trax-cpg-dwh-int.prod.store_dim`
+where project_name IN ('pureaidemoemea')
+    AND is_deleted = FALSE
+    and store_is_test = FALSE
+    and is_latest_version = TRUE
+    and store_is_active = TRUE
+    --{visited_stores} -- to select only stores where there were more than X visits taken. Ex: AND store_pk_service IN (SELECT store_fk FROM prod.session_dim WHERE project_name IN ('beiersdorfru') GROUP BY store_fk HAVING count(*) >= 5 )
+    --{custom_filters} -- optional to add filters on selected attributes
+	
+);
