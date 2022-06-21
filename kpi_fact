@@ -1,0 +1,122 @@
+create or replace table ootb_perfect_store.kpi_fact as
+with	
+	
+    cte_dim_numerator_type_names --assigning numbers to numerator names to make the product_dim join in PBI more efficient
+    as
+    (select distinct
+       dense_rank() OVER (ORDER BY kpi_fact.numerator_type_name asc) AS numerator_type_name_key, 
+        kpi_fact.numerator_type_name
+        from prod.kpi_fact
+        where kpi_fact.project_name in ('pureaidemoemea')
+        order by 1 asc
+        ),
+
+	cte_dim_denominator_type_names --assigning numbers to denominator names to make the product_dim join in PBI more efficient
+    as
+    (select distinct
+       dense_rank() OVER (ORDER BY kpi_fact.denominator_type_name asc) AS denominator_type_name_key, 
+        kpi_fact.denominator_type_name
+        from prod.kpi_fact
+        where kpi_fact.project_name in ('pureaidemoemea')
+        order by 1 asc
+        ),
+        
+	cte_dim_context_type_names --assigning numbers to context names to make the product_dim join in PBI more efficient
+    as
+    (select distinct
+       dense_rank() OVER (ORDER BY kpi_fact.context_id_type_name asc) AS context_type_name_key, 
+        kpi_fact.context_id_type_name 
+        from prod.kpi_fact
+       where kpi_fact.project_name in ('pureaidemoemea')
+        order by 1 asc
+        ),
+		
+	cte_dim_scene 
+	as
+	(select
+		scene_pk,
+		scene_explorer_url
+		from `trax-cpg-dwh-prod.prod.scene_dim` scene_dim
+		where scene_dim.project_name in ('pureaidemoemea')
+		and scene_dim.visit_date >= '2022-01-01'
+	),
+
+    cte_numerator_dim
+    as
+	(select distinct          
+        cast (kpi_fact.project_name||kpi_fact.numerator_id || kpi_fact.numerator_path as string) as numerator_name_pk,
+		compliance_kpi_fact_numerator_dim_with_values.numerator_name AS numerator_name
+        from  prod.kpi_fact
+        join ootb_perfect_store.compliance_kpi_fact_numerator_dim_with_values on compliance_kpi_fact_numerator_dim_with_values.numerator_name_pk =cast (kpi_fact.project_name||kpi_fact.numerator_id || kpi_fact.numerator_path as string)
+        where kpi_fact.project_name in ('pureaidemoemea')
+		and kpi_fact.result_type not in ('PRESENCE','KPI SCORE')
+        and  (kpi_fact.result_value is not null or kpi_fact.score_value is not null ) -- need to be configurable in the future
+		and kpi_fact.visit_date >= '2022-01-01'),
+
+	cte_kpi_fact
+	as
+	(
+select -- fact table
+kpi_fact.project_name,
+		session_dim.session_pk as session_fk,
+       	cte_dim_scene.scene_pk as scene_fk,
+		session_dim.session_explorer_url,
+       	cte_dim_scene.scene_explorer_url,
+		kpi_fact.visit_date,
+		store_dim.store_pk as store_fk,
+		user_dim.user_pk as user_fk,
+		cast (user_dim.user_pk || 0 || store_dim.store_pk as int64) as ownership_fk,
+		kpi_fact.kpi_id,
+		kpi_fact.kpi_name,
+		cast(kpi_fact.kpi_id || cte_dim_numerator_type_names.numerator_type_name_key || kpi_fact.numerator_id || cte_dim_denominator_type_names.denominator_type_name_key || kpi_fact.denominator_id || cte_dim_context_type_names.context_type_name_key || kpi_fact.context_id as string) as kpi_fk_service, -- unique identifier of the kpi
+		cast (kpi_fact.project_name||kpi_fact.numerator_id || kpi_fact.numerator_path as string) as numerator_name_fk,
+		kpi_fact.numerator_type_name,
+		kpi_fact.numerator_id,
+		kpi_fact.denominator_type_name,
+		kpi_fact.denominator_id,
+        kpi_fact.context_id_type_name,
+		kpi_fact.context_id,
+        kpi_fact.result,
+		result_type,
+		result_value,
+		score_value
+	from prod.kpi_fact
+	join cte_dim_numerator_type_names on kpi_fact.numerator_type_name = cte_dim_numerator_type_names.numerator_type_name
+	join cte_dim_denominator_type_names  on kpi_fact.denominator_type_name = cte_dim_denominator_type_names.denominator_type_name
+    join cte_dim_context_type_names on kpi_fact.context_id_type_name = cte_dim_context_type_names.context_id_type_name
+	left join ootb_perfect_store.session_dim on kpi_fact.session_fk = session_dim.session_pk_service
+  	left join cte_dim_scene  on cte_dim_scene.scene_pk = kpi_fact.scene_fk
+	left join ootb_perfect_store.store_dim on kpi_fact.store_fk = store_dim.store_pk_service
+	left join ootb_perfect_store.user_dim on kpi_fact.user_fk = user_dim.user_pk_service
+	where 
+		kpi_fact.project_name in ('pureaidemoemea')
+		and kpi_fact.result_type not in ('PRESENCE','KPI SCORE')
+      and  (kpi_fact.result_value is not null or kpi_fact.score_value is not null ) -- need to be configurable in the future
+		and kpi_fact.visit_date >= '2022-01-01')
+ select 
+cte_kpi_fact.project_name,
+ 		cte_kpi_fact.session_fk,
+       	cte_kpi_fact.scene_fk,
+		cte_kpi_fact.session_explorer_url,
+       	cte_kpi_fact.scene_explorer_url,
+		cte_kpi_fact.visit_date,
+		cte_kpi_fact.store_fk,
+		cte_kpi_fact.user_fk,
+		cte_kpi_fact.ownership_fk,
+		cte_kpi_fact.kpi_id,
+		cte_kpi_fact.kpi_name,
+		cte_kpi_fact.kpi_fk_service,
+		cte_kpi_fact.numerator_name_fk,
+		cte_kpi_fact.numerator_type_name,
+		cte_kpi_fact.numerator_id,
+        cte_numerator_dim.numerator_name,
+		cte_kpi_fact.denominator_type_name,
+		cte_kpi_fact.denominator_id,
+        cte_kpi_fact.context_id_type_name,
+		cte_kpi_fact.context_id,
+        cte_kpi_fact.result,
+		cte_kpi_fact.result_type,
+		cte_kpi_fact.result_value,
+		cte_kpi_fact.score_value
+		from cte_kpi_fact
+		left join cte_numerator_dim on cte_kpi_fact.numerator_name_fk = cte_numerator_dim.numerator_name_pk
