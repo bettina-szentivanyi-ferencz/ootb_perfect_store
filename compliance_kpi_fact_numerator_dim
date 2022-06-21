@@ -1,0 +1,16 @@
+drop table ootb_perfect_store.compliance_kpi_fact_numerator_dim;
+create table ootb_perfect_store.compliance_kpi_fact_numerator_dim
+ CLUSTER BY
+   numerator_path, numerator_id AS
+  
+    
+   select distinct 
+    kpi_fact.project_name,
+    cast (kpi_fact.project_name||kpi_fact.numerator_id || kpi_fact.numerator_path as string) as numerator_name_pk,
+    kpi_fact.numerator_path,
+    kpi_fact.numerator_id
+    from `trax-cpg-dwh-int.prod.kpi_fact` kpi_fact
+    where 	kpi_fact.project_name ='pureaidemoemea'
+		and kpi_fact.kpi_name in ('OSA - Main Shelf - SKU','Shelf Placement - SKU','OSA - Secondary Placement - SKU','Brand Block - Brand Level - Dove','Brand Block - Brand Level - Le Petit Marseilles','Brand Block - Brand Level - Palmolive','Brand Share out of Category - Main Shelf','Brand Share out of Category - Secondary Placement')
+        and (kpi_fact.result_value not in ('PRESENCE','KPI SCORE') or kpi_fact.score_value not in ('PRESENCE','KPI SCORE')) -- PASS/FAIL need to be configurable in the future
+		and kpi_fact.visit_date >= '2022-01-01';
