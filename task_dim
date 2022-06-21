@@ -1,0 +1,11 @@
+create or replace table ootb_perfect_store.task_dim
+as
+SELECT
+  ROW_NUMBER() OVER (ORDER BY task_pk asc) AS task_pk, --mandatory hidden
+  task_pk AS task_pk_service, --mandatory hidden
+  project_name, --mandatory
+  task_name, --mandatory
+FROM prod.task_dim
+WHERE project_name IN ('pureaidemoemea') --mandatory
+  AND is_deleted = FALSE --mandatory
+  and included_in_secondary_shelf_report = 'Y'
