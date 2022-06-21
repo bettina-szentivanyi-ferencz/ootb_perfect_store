@@ -1,0 +1,58 @@
+create or replace table ootb_perfect_store.assortment_kpi_fact
+as
+with
+	
+    cte_dim_numerator_type_names --assigning numbers to numerator names to make the product_dim join in PBI more efficient
+    as
+    (select distinct
+       dense_rank() OVER (ORDER BY kpi_fact.numerator_type_name asc) AS numerator_type_name_key, 
+        kpi_fact.numerator_type_name
+        from prod.kpi_fact
+        where kpi_fact.project_name in ('pureaidemoemea')
+        order by 1 asc
+        ),
+
+	cte_dim_denominator_type_names --assigning numbers to denominator names to make the product_dim join in PBI more efficient
+    as
+    (select distinct
+       dense_rank() OVER (ORDER BY kpi_fact.denominator_type_name asc) AS denominator_type_name_key, 
+        kpi_fact.denominator_type_name
+        from prod.kpi_fact
+        where kpi_fact.project_name in ('pureaidemoemea')
+        order by 1 asc
+        )
+
+select -- fact table
+		session_dim.session_pk as session_fk,
+		session_dim.session_explorer_url,
+		kpi_fact.visit_date,
+		store_dim.store_pk as store_fk,
+		user_dim.user_pk as user_fk,
+		cast (user_dim.user_pk || 0 || store_dim.store_pk as int64) as ownership_fk,
+		kpi_fact.kpi_id,
+		kpi_fact.kpi_name,
+		cast(kpi_fact.kpi_id || cte_dim_numerator_type_names.numerator_type_name_key || kpi_fact.numerator_id || cte_dim_denominator_type_names.denominator_type_name_key || kpi_fact.denominator_id as int64) as kpi_fk_service,
+		product_dim.product_pk as product_fk,
+		kpi_fact.numerator_type_name,
+		kpi_fact.numerator_id,
+		kpi_fact.denominator_type_name,
+		kpi_fact.denominator_id,
+		kpi_fact.numerator_result,
+		kpi_fact.denominator_result,
+		kpi_fact.result,
+		kpi_fact.target,
+		kpi_fact.score,
+		cast(kpi_fact.score_value as string) as score_value,
+		case when kpi_fact.numerator_result >= 1 then 1 when kpi_fact.numerator_result = 0 then 0 end as presence
+	from prod.kpi_fact
+	join cte_dim_numerator_type_names on kpi_fact.numerator_type_name = cte_dim_numerator_type_names.numerator_type_name
+	join cte_dim_denominator_type_names  on kpi_fact.denominator_type_name = cte_dim_denominator_type_names.denominator_type_name
+	join ootb_perfect_store.session_dim on kpi_fact.session_fk = session_dim.session_pk_service
+	join ootb_perfect_store.store_dim on kpi_fact.store_fk = store_dim.store_pk_service
+	join ootb_perfect_store.user_dim on kpi_fact.user_fk = user_dim.user_pk_service
+	join ootb_perfect_store.product_dim on kpi_fact.project_name || kpi_fact.numerator_id = product_dim.product_pk_service 
+	where 
+		kpi_fact.project_name in ('pureaidemoemea')
+		and kpi_fact.kpi_name in ('OSA - Main Shelf - SKU','OSA - Secondary Placement - SKU')
+		and kpi_fact.visit_date >= '2022-01-01'
+        	and kpi_fact.numerator_type_name = 'product' --mandatory, default
