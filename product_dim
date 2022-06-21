@@ -1,0 +1,16 @@
+create or replace table ootb_perfect_store.product_dim
+as
+select --selecting the default product_dim --MANDATORY
+	project_name,--MANDATORY
+	ROW_NUMBER() OVER (ORDER BY product_pk asc) AS product_pk, --MANDATORY hidden
+	product_pk AS product_pk_service, --mandatory hidden
+	own, --mandatory
+  category_name, 
+  brand_name,
+  product_name
+
+from prod.product_dim
+where project_name in ('pureaidemoemea') --config/programming --MANDATORY
+	and is_deleted = FALSE
+	and product_is_active = TRUE
+  AND is_latest_version = TRUE
