@@ -4,18 +4,17 @@ as(
 
 select
 project_name,
-    ROW_NUMBER() OVER (ORDER BY store_pk asc) AS store_pk, --mandatory hidden
-    store_pk AS store_pk_service, --mandatory hidden
-    store_name,-- optional
-    region_name,-- optional
-    retailer_name -- optional
+    ROW_NUMBER() OVER (ORDER BY store_pk asc) AS store_pk,
+    store_pk AS store_pk_service,
+    region_name,
+    retailer_name,
+    store_type_name as channel,
+    store_number,
+    store_name
 from `trax-cpg-dwh-int.prod.store_dim`
 where project_name IN ('pureaidemoemea')
     AND is_deleted = FALSE
-    and store_is_test = FALSE
+    --and store_is_test = FALSE - removed otherwise data is not visible, it is default in the module template 
     and is_latest_version = TRUE
     and store_is_active = TRUE
-    --{visited_stores} -- to select only stores where there were more than X visits taken. Ex: AND store_pk_service IN (SELECT store_fk FROM prod.session_dim WHERE project_name IN ('beiersdorfru') GROUP BY store_fk HAVING count(*) >= 5 )
-    --{custom_filters} -- optional to add filters on selected attributes
-	
-);
+ );
