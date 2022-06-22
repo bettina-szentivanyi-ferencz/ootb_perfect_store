@@ -8,6 +8,8 @@ SELECT
   user_pk AS user_pk_service, 
   project_name,
   CAST(login_name AS STRING) AS user_name, 
+  first_name,
+  last_name,
   supervisor_login_name,
   supervisor_full_name
 FROM `trax-cpg-dwh-int.prod.user_dim`
