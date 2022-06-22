@@ -5,14 +5,13 @@ as(
 
 SELECT
   ROW_NUMBER() OVER (ORDER BY user_pk asc) AS user_pk, 
-  user_pk AS user_pk_service, --mandatory hidden
-  login_name, -- mandatory
-  project_name, -- mandatory
-  supervisor_login_name, -- mandatory for rls
+  user_pk AS user_pk_service, 
+  project_name,
+  CAST(login_name AS STRING) AS user_name, 
+  supervisor_login_name,
+  supervisor_full_name
 FROM `trax-cpg-dwh-int.prod.user_dim`
-WHERE project_name IN ('pureaidemoemea') --mandatory
-  AND is_deleted = FALSE -- mandatory
-  AND trax_user = FALSE
- -- {users_with_sessions} -- quastion to Sharon
-
-  );
+WHERE project_name IN ('pureaidemoemea') 
+  AND is_deleted = FALSE 
+  AND trax_user = TRUE
+ );
