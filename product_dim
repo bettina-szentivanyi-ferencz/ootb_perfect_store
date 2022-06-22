@@ -1,3 +1,5 @@
+drop table ootb_perfect_store.product_dim;
+
 create or replace table ootb_perfect_store.product_dim
 as
 select 
