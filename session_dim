@@ -1,0 +1,61 @@
+create or replace table ootb_perfect_store.session 
+as
+(
+WITH  cte_session_dim 
+AS(
+
+SELECT
+  session_dim.project_name,
+  ROW_NUMBER() OVER (ORDER BY session_dim.session_pk asc) AS session_pk,
+  session_dim.session_pk as session_pk_service,
+  session_dim.session_explorer_url,
+  store_dim.store_pk as store_fk, 
+  user_dim.user_pk as user_fk, 
+  session_dim.visit_date as date_fk,
+-- create date ranges
+  CONCAT(CAST(EXTRACT(YEAR from visit_date) as string), LPAD(CAST(EXTRACT(MONTH from visit_date) as string),2,'0') )  as year_month_name,
+  CONCAT(CAST(EXTRACT(YEAR from visit_date) as string) )  as year,
+  CONCAT(CAST(EXTRACT(YEAR from visit_date) as string), LPAD(CAST(EXTRACT(QUARTER from visit_date) as string),2,'0') )  as year_quarter,
+  
+FROM `trax-cpg-dwh-int.prod.session_dim` session_dim
+    join ootb_perfect_store.user_dim on user_pk_service=user_fk -- to select sessions only from 'selected' users 
+    join ootb_perfect_store.store_dim on store_pk_service=store_fk -- to select sessions only from 'selected' stores
+
+WHERE visit_date >= '2022-01-01' -- parameter  
+AND session_dim.project_name IN ('pureaidemoemea')
+AND status = 'Completed' -- by default 
+AND is_deleted = FALSE -- by default
+),
+
+-- create rankings
+session_dim_ranked as
+( SELECT cte_session_dim.session_pk, cte_session_dim.store_fk, cte_session_dim.date_fk, 
+dense_rank()
+     OVER( 
+     PARTITION BY cte_session_dim.store_fk, cte_session_dim.year_month_name
+     ORDER BY date(cte_session_dim.date_fk) DESC) AS rank_session_monthly,  
+     dense_rank()
+     OVER( 
+     PARTITION BY cte_session_dim.store_fk, cte_session_dim.year_quarter
+     ORDER BY date(cte_session_dim.date_fk) DESC) AS rank_session_quarterly, 
+     dense_rank()
+     OVER( 
+     PARTITION BY cte_session_dim.store_fk, cte_session_dim.year
+     ORDER BY date(cte_session_dim.date_fk) DESC) AS rank_session_yearly,
+     dense_rank()
+     OVER( 
+     PARTITION BY cte_session_dim.store_fk
+     ORDER BY date(cte_session_dim.date_fk) DESC) AS rank_session_overall
+      FROM cte_session_dim
+) 
+
+SELECT  
+  cte_session_dim.project_name,
+  cte_session_dim.session_pk,
+  cte_session_dim.session_pk_service,
+  cte_session_dim.session_explorer_url,
+  cte_session_dim.user_fk,
+  cte_session_dim.store_fk,
+  cte_session_dim.date_fk
+FROM cte_session_dim   
+LEFT JOIN session_dim_ranked ON cte_session_dim.session_pk = session_dim_ranked.session_pk);
