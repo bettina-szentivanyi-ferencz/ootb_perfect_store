@@ -1,4 +1,5 @@
-create or replace table ootb_perfect_store.session 
+drop table ootb_perfect_store.session_dim;
+create or replace table ootb_perfect_store.session_dim 
 as
 (
 WITH  cte_session_dim 
@@ -18,13 +19,13 @@ SELECT
   CONCAT(CAST(EXTRACT(YEAR from visit_date) as string), LPAD(CAST(EXTRACT(QUARTER from visit_date) as string),2,'0') )  as year_quarter,
   
 FROM `trax-cpg-dwh-int.prod.session_dim` session_dim
-    join ootb_perfect_store.user_dim on user_pk_service=user_fk -- to select sessions only from 'selected' users 
-    join ootb_perfect_store.store_dim on store_pk_service=store_fk -- to select sessions only from 'selected' stores
+    left join ootb_perfect_store.user_dim on user_pk_service=user_fk -- by default join but 3 sessions doesn't have users in the data
+    join ootb_perfect_store.store_dim on store_pk_service=store_fk 
 
-WHERE visit_date >= '2022-01-01' -- parameter  
+WHERE visit_date >= '2022-01-01'
 AND session_dim.project_name IN ('pureaidemoemea')
-AND status = 'Completed' -- by default 
-AND is_deleted = FALSE -- by default
+--AND status = 'Completed' -- sessions are not visible if I keep them, by default they are part of it
+--AND is_deleted = FALSE -- sessions are not visible if I keep them, by default they are part of it
 ),
 
 -- create rankings
