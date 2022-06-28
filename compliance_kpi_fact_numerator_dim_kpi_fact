@@ -1,3 +1,4 @@
+drop table ootb_perfect_store.compliance_kpi_fact_numerator_dim;
 create table ootb_perfect_store.compliance_kpi_fact_numerator_dim
  CLUSTER BY
    numerator_path, numerator_id AS
