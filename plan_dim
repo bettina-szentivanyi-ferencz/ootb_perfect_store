@@ -1,0 +1,23 @@
+create or replace table ootb_perfect_store.plan_dim as
+with cte_dim_plan --create the list of plans for the project
+as
+(select distinct
+	project_name,
+	start_date as plan_start_date,
+	end_date as plan_end_date,
+	plan_name,
+	row_number() over (order by project_name, start_date, end_date) as sort_plan
+from `trax-cpg-dwh-int.prod.plan_dim`
+where project_name in ('pureaidemoemea')
+AND is_active = TRUE
+order by project_name, start_date, end_date asc
+)
+	
+select distinct --create the plan_dim table used in the dashboard (dates for full years in the project, plan info added per date)
+	calendar_dim.date as date_fk,
+	calendar_dim.date,
+	case when cte_dim_plan.plan_name is null then 'NA' else cte_dim_plan.plan_name end as plan_name,
+	case when cte_dim_plan.sort_plan is null then 9999 else cte_dim_plan.sort_plan end as sort_plan,
+from ootb_perfect_store.calendar_dim, cte_dim_plan
+where calendar_dim.date between cte_dim_plan.plan_start_date and cte_dim_plan.plan_end_date
+order by calendar_dim.date
