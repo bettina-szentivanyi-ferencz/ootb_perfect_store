@@ -1,3 +1,4 @@
+drop table ootb_perfect_store.kpi_fact;
 create or replace table ootb_perfect_store.kpi_fact as
 with	
 	
@@ -36,7 +37,7 @@ with
 	(select
 		scene_pk,
 		scene_explorer_url
-		from `trax-cpg-dwh-prod.prod.scene_dim` scene_dim
+		from `trax-cpg-dwh-int.prod.scene_dim` scene_dim
 		where scene_dim.project_name in ('pureaidemoemea')
 		and scene_dim.visit_date >= '2022-01-01'
 	),
@@ -76,10 +77,10 @@ kpi_fact.project_name,
 		kpi_fact.denominator_id,
         kpi_fact.context_id_type_name,
 		kpi_fact.context_id,
+    kpi_fact.target,
+    kpi_fact.weight,
         kpi_fact.result,
-		result_type,
-		result_value,
-		score_value
+        kpi_fact.score
 	from prod.kpi_fact
 	join cte_dim_numerator_type_names on kpi_fact.numerator_type_name = cte_dim_numerator_type_names.numerator_type_name
 	join cte_dim_denominator_type_names  on kpi_fact.denominator_type_name = cte_dim_denominator_type_names.denominator_type_name
@@ -92,7 +93,8 @@ kpi_fact.project_name,
 		kpi_fact.project_name in ('pureaidemoemea')
 		and kpi_fact.result_type not in ('PRESENCE','KPI SCORE')
       and  (kpi_fact.result_value is not null or kpi_fact.score_value is not null ) -- need to be configurable in the future
-		and kpi_fact.visit_date >= '2022-01-01')
+		and kpi_fact.visit_date >= '2022-01-01'
+    and kpi_name in ("Perfect Store", "Main Shelf", "OSA - Main Shelf", "SOS - Main Shelf", "Manufacturer share out of category - Main Shelf", "Brand Share out of Category - Main Shelf", "Position", "Brand Block", "Shelf Placement", "Secondary Placement", "OSA - Secondary Placement", "Manufacturer share out of Category - Secondary placement", "Brand Share out of Category - Secondary Placement"))
  select 
 cte_kpi_fact.project_name,
  		cte_kpi_fact.session_fk,
@@ -114,9 +116,9 @@ cte_kpi_fact.project_name,
 		cte_kpi_fact.denominator_id,
         cte_kpi_fact.context_id_type_name,
 		cte_kpi_fact.context_id,
+    cte_kpi_fact.target,
+     cte_kpi_fact.weight,
         cte_kpi_fact.result,
-		cte_kpi_fact.result_type,
-		cte_kpi_fact.result_value,
-		cte_kpi_fact.score_value
+        cte_kpi_fact.score
 		from cte_kpi_fact
 		left join cte_numerator_dim on cte_kpi_fact.numerator_name_fk = cte_numerator_dim.numerator_name_pk
