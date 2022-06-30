@@ -118,7 +118,9 @@ cte_kpi_fact.project_name,
 		cte_kpi_fact.context_id,
     cte_kpi_fact.target,
      cte_kpi_fact.weight,
-        cte_kpi_fact.result,
-        cte_kpi_fact.score
+      cte_kpi_fact.result,
+      cte_kpi_fact.score,
+        cte_kpi_fact.result * 100 as result_point,
+        cte_kpi_fact.score * 100 as score_point,
 		from cte_kpi_fact
 		left join cte_numerator_dim on cte_kpi_fact.numerator_name_fk = cte_numerator_dim.numerator_name_pk
