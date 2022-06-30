@@ -10,7 +10,9 @@ project_name,
     retailer_name,
     store_type_name as channel,
     store_number,
-    store_name
+    store_name, 
+    latitude,
+    longitude 
 from `trax-cpg-dwh-int.prod.store_dim`
 where project_name IN ('pureaidemoemea')
     AND is_deleted = FALSE
